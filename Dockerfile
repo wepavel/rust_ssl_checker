@@ -20,7 +20,6 @@ FROM alpine:latest AS release
 WORKDIR /app
 
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/release/checker .
-COPY config.yml .
 ENV CONFIG_PATH=./config.yml
 
 CMD [ "./checker" ]
