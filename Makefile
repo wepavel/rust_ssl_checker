@@ -22,6 +22,8 @@ show_version:
 
 build:
 	@docker build -f $(DOCKERFILE) -t $(IMAGE) $(CONTEXT)
+	@docker tag $(IMAGE_VERSIONED) $(IMAGE_LATEST)
+
 
 run:
 	@docker run --rm $(IMAGE)
