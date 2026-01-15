@@ -48,7 +48,9 @@ pub struct ServiceConfig {
     pub check_interval_hours: u64,
     pub notifiers: HashMap<String, NotifierConfig>,
     pub sources: HashMap<String, SourceConfig>,
+    #[serde(default = "ServiceConfig::default_alarm_days")]
     pub alarm_days: i64,
+    #[serde(default = "ServiceConfig::default_alarm_days")]
     pub ssl_alarm_days: i64,
 }
 
@@ -64,4 +66,5 @@ impl ServiceConfig {
 
         Ok(config)
     }
+    fn default_alarm_days() -> i64 {7}
 }
