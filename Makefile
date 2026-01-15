@@ -21,11 +21,10 @@ show_version:
 	@echo "Версия из Cargo.toml: $(CARGO_VERSION)"
 
 build:
-	@docker build -f $(DOCKERFILE) \
-		-t $(IMAGE_VERSIONED) \
-		-t $(IMAGE_LATEST) \
-		$(CONTEXT)
-
+	docker build \
+		-f $(DOCKERFILE) \
+		-t $(IMAGE_NAME):$(CARGO_VERSION) \
+		-t $(IMAGE_NAME):latest \
 
 run:
 	@docker run --rm $(IMAGE)
