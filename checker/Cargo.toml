@@ -1,0 +1,30 @@
+[package]
+name = "checker"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+#Inner crates
+base.workspace = true
+
+serde.workspace = true
+
+# Async
+async-trait = "0.1"
+tokio-native-tls = "0.3"
+futures = "0.3"
+
+# Domain checking
+idna = "1"
+reqwest = { version = "0.13", features = ["json"]}
+publicsuffix = "2"
+native-tls = "0.2"
+x509-parser = "0.18"
+whois-rust = { version = "1.6", features = ["tokio"] }
+addr = "0.15.6"
+
+# Parsing html
+html-escape = "0.2"
+
+openssl = { version = "0.10", features = ["vendored"] }
+openssl-sys = { version = "0.9", features = ["vendored"] }

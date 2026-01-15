@@ -1,0 +1,88 @@
+name: Build and Push
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.CICD_TOKEN }}
+          submodules: recursive
+
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install tools
+        run: |
+          cargo install cargo-edit  # для cargo set-version
+          # или: cargo install cargo-bump
+
+      - name: Calculate version
+        id: version
+        run: |
+          COMMITS=$(git log --oneline --grep="^\[version\]" -n 1 --pretty=format:"%H" || echo "")
+          RANGE="${COMMITS:+$COMMITS..HEAD}"
+          RANGE="${RANGE:-$(git rev-list --max-count=50 HEAD | tail -n1)..HEAD}"
+          
+          MSGS=$(git log --pretty=format:"%s" $RANGE | grep -v "^\[version\]" || echo "")
+          [ -z "$MSGS" ] && { echo "skip=true" >> $GITHUB_OUTPUT; exit 0; }
+          
+          # Читаем текущую версию из Cargo.toml
+          CURRENT_VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/version *= *"//; s/"//')
+          IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
+          
+          # Определяем тип изменения версии
+          skip=false
+          if echo "$MSGS" | grep -q '^\[ref\]'; then
+            major=$((major + 1)); minor=0; patch=0
+          elif echo "$MSGS" | grep -q '^\[add\]'; then
+            minor=$((minor + 1)); patch=0
+          elif echo "$MSGS" | grep -q '^\[fix\]'; then
+            patch=$((patch + 1))
+          elif echo "$MSGS" | grep -q '^\[ref_\]'; then
+            major=$((major + 1)); minor=0; patch=0; skip=true
+          elif echo "$MSGS" | grep -q '^\[add_\]'; then
+            minor=$((minor + 1)); patch=0; skip=true
+          elif echo "$MSGS" | grep -q '^\[fix_\]'; then
+            patch=$((patch + 1)); skip=true
+          else
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          NEW_VERSION="${major}.${minor}.${patch}"
+          echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
+          [ "$skip" = true ] && echo "skip=true" >> $GITHUB_OUTPUT
+          
+          # Обновляем версию в Cargo.toml
+          cargo set-version ${NEW_VERSION}
+          
+          # Если есть workspace, обновляем версии во всех пакетах
+          if grep -q '^\[workspace\]' Cargo.toml; then
+            cargo set-version --all ${NEW_VERSION}
+          fi
+
+      - name: Build and push
+        if: steps.version.outputs.skip != 'true'
+        env:
+          DOCKER_USER: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASS: ${{ secrets.DOCKER_PASS }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          
+          make build
+          make push
+          
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          git add Cargo.toml Cargo.lock
+          git commit -m "[version] ${NEW_VERSION}"
+          git push https://x-access-token:${{ secrets.CICD_TOKEN }}@github.com/${{ github.repository }}.git main

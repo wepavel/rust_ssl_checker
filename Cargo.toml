@@ -1,0 +1,20 @@
+[workspace.package]
+edition = "2024"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+opt-level = "z"
+strip = true
+
+[workspace]
+resolver = "2"
+members = ["base", "checker"]
+
+[workspace.dependencies]
+#----------Inner crates----------
+base = { path="base" }
+checker = { path="checker" }
+
+
+serde = { version = "1.0", features = ["derive"]}

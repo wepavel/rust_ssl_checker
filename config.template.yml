@@ -1,0 +1,23 @@
+log_config:
+  log_level: "info"
+  use_color: "true"
+
+alarm_days: 5
+ssl_alarm_days: 5
+check_interval_hours: 24
+
+sources:
+  selectel:
+    account_id: "12345"
+    password: "password"
+    project_name: "Project Name"
+    user: "user"
+  file:
+    filename: "hostnames.txt"
+
+notifiers:
+  console: ~
+  telegram:
+    bot_token: "1231231231:WASDwasd..."
+    chat_id: "-1231231231"
+    retries: 5

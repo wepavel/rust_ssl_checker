@@ -1,0 +1,22 @@
+# Exclude Rust build artifacts
+target/
+# Exclude Cargo generated files
+.cargo/
+
+# Exclude source control and related files
+.git
+.gitignore
+
+# Exclude Docker files
+Dockerfile
+.dockerignore
+
+# Exclude log and temporary files
+*.log
+*.tmp
+temp/
+tmp/
+
+# Exclude OS-generated files
+.DS_Store
+Thumbs.db
