@@ -17,6 +17,7 @@ IMAGE_LATEST = $(IMAGE_NAME):latest
 
 all: show_version build
 
+
 show_version:
 	@echo "Версия из Cargo.toml: $(CARGO_VERSION)"
 
