@@ -130,7 +130,8 @@ jobs:
           
           # Собираем с версией и latest
           make build
-          make push-all
+          make push
+          make push-latest
           
           NEW_VERSION="${{ steps.version.outputs.new_version }}"
           

@@ -1,0 +1,37 @@
+[package]
+name = "base"
+version = "0.1.0"
+edition.workspace = true
+
+[dependencies]
+
+# Async — асинхронный рантайм
+tokio = { version = "1.49", features = ["full"] }
+
+# Logging — структурированное логирование
+tracing = { version = "0.1", features = ["default"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Output formatting — оформление вывода
+colored = "3.0"
+
+# Time — работа с датами и временем
+chrono = { version = "0.4", features = ["serde"] }
+
+# Serialization — JSON/YAML сериализация
+serde.workspace = true
+serde_json = "1.0"
+serde_yaml = "0.9"
+
+# Generating data — генерация идентификаторов
+uuid = { version = "1.19.0", features = ["v7"] }
+
+# Error handling — обработка ошибок
+thiserror = "2.0"
+anyhow = "1.0"
+
+# Config — хранение глобальных значений
+once_cell = { version = "1.21", features = ["default"] }
+indexmap = { version = "2", features = ["serde"] }
+
+config = "0.15"
