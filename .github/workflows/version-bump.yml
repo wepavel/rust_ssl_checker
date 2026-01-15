@@ -2,7 +2,7 @@ name: Build and Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -140,4 +140,4 @@ jobs:
           git add checker/Cargo.toml || true
           
           git commit -m "[version] ${NEW_VERSION}"
-          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git master
