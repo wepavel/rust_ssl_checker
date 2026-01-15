@@ -58,7 +58,7 @@ notifiers:
 ## Запуск
 ### Терминал
 ```bash
-python3 scripts/ssl_checker.py
+./checker
 ```
 ### Из запущенного Docker-контейнера
 ```bash

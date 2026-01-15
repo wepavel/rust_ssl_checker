@@ -2,7 +2,7 @@ name: Build and Push
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 jobs:
   build:
@@ -85,4 +85,4 @@ jobs:
           NEW_VERSION="${{ steps.version.outputs.new_version }}"
           git add Cargo.toml Cargo.lock
           git commit -m "[version] ${NEW_VERSION}"
-          git push https://x-access-token:${{ secrets.CICD_TOKEN }}@github.com/${{ github.repository }}.git main
+          git push https://x-access-token:${{ secrets.CICD_TOKEN }}@github.com/${{ github.repository }}.git master
