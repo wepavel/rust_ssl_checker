@@ -1,0 +1,10 @@
+name: ssl-checker
+
+services:
+  ssl-checker:
+    image: "wepal/rust-ssl-checker:latest"
+    restart: "always"
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ./config.yml:/app/config.yml:ro
+      - ./hostnames.txt:/app/hostnames.txt:ro

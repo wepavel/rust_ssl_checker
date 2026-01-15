@@ -2,7 +2,7 @@ name: Build and Push
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "main" ]
 
 jobs:
   build:
@@ -20,55 +20,104 @@ jobs:
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
 
-      - name: Install tools
-        run: |
-          cargo install cargo-edit  # для cargo set-version
-          # или: cargo install cargo-bump
+      - name: Install cargo-edit
+        run: cargo install cargo-edit
 
       - name: Calculate version
         id: version
         run: |
-          COMMITS=$(git log --oneline --grep="^\[version\]" -n 1 --pretty=format:"%H" || echo "")
-          RANGE="${COMMITS:+$COMMITS..HEAD}"
-          RANGE="${RANGE:-$(git rev-list --max-count=50 HEAD | tail -n1)..HEAD}"
+          # Ищем последний коммит с [version]
+          LAST_VERSION_COMMIT=$(git log --oneline --grep="^\[version\]" -n 1 --pretty=format:"%H" || echo "")
           
+          # Определяем диапазон коммитов
+          if [ -n "$LAST_VERSION_COMMIT" ]; then
+            RANGE="${LAST_VERSION_COMMIT}..HEAD"
+          else
+            FIRST_COMMIT=$(git rev-list --max-parents=0 HEAD)
+            RANGE="${FIRST_COMMIT}..HEAD"
+          fi
+          
+          echo "Analyzing commits in range: $RANGE"
+          
+          # Получаем сообщения коммитов
           MSGS=$(git log --pretty=format:"%s" $RANGE | grep -v "^\[version\]" || echo "")
-          [ -z "$MSGS" ] && { echo "skip=true" >> $GITHUB_OUTPUT; exit 0; }
           
-          # Читаем текущую версию из Cargo.toml
-          CURRENT_VERSION=$(grep -m1 '^version' Cargo.toml | sed 's/version *= *"//; s/"//')
+          if [ -z "$MSGS" ]; then
+            echo "No new commits to process"
+            echo "skip=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          
+          echo "Commits to analyze:"
+          echo "$MSGS"
+          
+          # Читаем текущую версию из корневого Cargo.toml (workspace)
+          # Сначала пробуем найти в [workspace.package]
+          CURRENT_VERSION=$(grep -A10 '^\[workspace.package\]' Cargo.toml | grep '^version' | head -n1 | sed 's/version *= *"//; s/"//' | tr -d ' ')
+          
+          # Если не нашли, пробуем найти в [package]
+          if [ -z "$CURRENT_VERSION" ]; then
+            CURRENT_VERSION=$(grep '^version' Cargo.toml | head -n1 | sed 's/version *= *"//; s/"//' | tr -d ' ')
+          fi
+          
+          if [ -z "$CURRENT_VERSION" ]; then
+            echo "Error: Could not find version in Cargo.toml"
+            echo "Adding default version 0.1.0 to workspace.package"
+            # Добавляем версию в [workspace.package]
+            sed -i '/^\[workspace.package\]/a version = "0.1.0"' Cargo.toml
+            CURRENT_VERSION="0.1.0"
+          fi
+          
+          echo "Current version: $CURRENT_VERSION"
+          
           IFS='.' read -r major minor patch <<< "$CURRENT_VERSION"
           
           # Определяем тип изменения версии
           skip=false
+          
           if echo "$MSGS" | grep -q '^\[ref\]'; then
+            echo "Found [ref] - incrementing major version"
             major=$((major + 1)); minor=0; patch=0
           elif echo "$MSGS" | grep -q '^\[add\]'; then
+            echo "Found [add] - incrementing minor version"
             minor=$((minor + 1)); patch=0
           elif echo "$MSGS" | grep -q '^\[fix\]'; then
+            echo "Found [fix] - incrementing patch version"
             patch=$((patch + 1))
           elif echo "$MSGS" | grep -q '^\[ref_\]'; then
+            echo "Found [ref_] - incrementing major version (skip build)"
             major=$((major + 1)); minor=0; patch=0; skip=true
           elif echo "$MSGS" | grep -q '^\[add_\]'; then
+            echo "Found [add_] - incrementing minor version (skip build)"
             minor=$((minor + 1)); patch=0; skip=true
           elif echo "$MSGS" | grep -q '^\[fix_\]'; then
+            echo "Found [fix_] - incrementing patch version (skip build)"
             patch=$((patch + 1)); skip=true
           else
+            echo "No version-changing commits found"
             echo "skip=true" >> $GITHUB_OUTPUT
             exit 0
           fi
           
           NEW_VERSION="${major}.${minor}.${patch}"
+          echo "New version: ${NEW_VERSION}"
           echo "new_version=${NEW_VERSION}" >> $GITHUB_OUTPUT
-          [ "$skip" = true ] && echo "skip=true" >> $GITHUB_OUTPUT
           
-          # Обновляем версию в Cargo.toml
-          cargo set-version ${NEW_VERSION}
-          
-          # Если есть workspace, обновляем версии во всех пакетах
-          if grep -q '^\[workspace\]' Cargo.toml; then
-            cargo set-version --all ${NEW_VERSION}
+          if [ "$skip" = true ]; then
+            echo "Skipping build as requested"
+            echo "skip=true" >> $GITHUB_OUTPUT
           fi
+          
+          # Обновляем версию в workspace
+          # Обновляем в корневом Cargo.toml (в секции [workspace.package])
+          if grep -q '^\[workspace.package\]' Cargo.toml; then
+            echo "Updating version in [workspace.package]"
+            sed -i "/^\[workspace.package\]/,/^\[/s/^version *= *\".*\"/version = \"${NEW_VERSION}\"/" Cargo.toml
+          fi
+          
+          # Обновляем версии во всех членах workspace
+          echo "Updating all workspace members"
+          cargo set-version --workspace ${NEW_VERSION}
 
       - name: Build and push
         if: steps.version.outputs.skip != 'true'
@@ -79,10 +128,16 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           
+          # Собираем с версией и latest
           make build
-          make push
+          make push-all
           
           NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          
+          # Добавляем все изменённые Cargo.toml файлы
           git add Cargo.toml Cargo.lock
+          git add base/Cargo.toml || true
+          git add checker/Cargo.toml || true
+          
           git commit -m "[version] ${NEW_VERSION}"
-          git push https://x-access-token:${{ secrets.CICD_TOKEN }}@github.com/${{ github.repository }}.git master
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git main

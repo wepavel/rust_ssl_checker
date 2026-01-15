@@ -13,6 +13,7 @@ $(error Не удалось получить версию из Cargo.toml. Уб�
 endif
 
 IMAGE = $(IMAGE_NAME):$(CARGO_VERSION)
+IMAGE_LATEST = $(IMAGE_NAME):latest
 
 all: show_version build
 
@@ -22,14 +23,15 @@ show_version:
 build:
 	@docker build -f $(DOCKERFILE) -t $(IMAGE) $(CONTEXT)
 
-build-dev:
-	@docker build -f $(DOCKERFILE).dev -t $(IMAGE) $(CONTEXT)
-
 run:
 	@docker run --rm $(IMAGE)
 
 push:
 	@docker push $(IMAGE)
+
+push-latest:
+	@echo "Pushing latest image: $(IMAGE_LATEST)"
+	@docker push $(IMAGE_LATEST)
 
 pull:
 	@docker pull $(IMAGE)
