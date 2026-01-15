@@ -26,10 +26,14 @@ build:
 run:
 	@docker run --rm $(IMAGE)
 
-push:
+docker-login:
+	@echo "Logging in to Docker registry..."
+	@docker login -u $(DOCKER_USER) -p $(DOCKER_PASS)
+
+push: docker-login
 	@docker push $(IMAGE)
 
-push-latest:
+push-latest: docker-login
 	@echo "Pushing latest image: $(IMAGE_LATEST)"
 	@docker push $(IMAGE_LATEST)
 
